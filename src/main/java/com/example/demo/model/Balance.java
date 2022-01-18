@@ -26,12 +26,15 @@ public class Balance {
     private Double customerBalance;
 
     @Column(name = "technecian_current_blance")
-    private Double TechnecianBalance;
+    private Double TechnicianBalance;
 
     @ManyToOne
     private Customer customer;
 
     @ManyToOne
     private Technician technician;
+
+    @OneToOne
+    private Suggestion suggestion;
 
 }
