@@ -40,6 +40,9 @@ public class Suggestion {
     @Enumerated(EnumType.STRING)
     private SuggestionStatus status = SuggestionStatus.Pending;
 
+    @OneToOne(mappedBy = "suggestion")
+    private Balance balance;
+
     @Override
     public String toString() {
         return "Suggestion{" +
