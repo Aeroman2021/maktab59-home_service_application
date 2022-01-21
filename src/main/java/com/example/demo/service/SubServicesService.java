@@ -46,15 +46,13 @@ public class SubServicesService extends AbstractCRUD<SubServices, Integer> imple
     }
 
     @Transactional
-    public SubServiceOutputDto submitTechnicianToSubService
-            (SubmitTechsToSubServicesInputDto submitTechsToSubServicesInputDto){
+    public SubServiceOutputDto submitTechnicianToSubService(Integer subserviceId,Integer technicianId){
         List<Technician> technicianList = new ArrayList<>();
-        Integer subServiceId = submitTechsToSubServicesInputDto.getSubServiceId();
-        Integer technicianId = submitTechsToSubServicesInputDto.getTechnicianId();
         Technician technician = technicianService.loadById(technicianId);
         technicianList.add(technician);
-        SubServices subServices = super.loadById(subServiceId);
+        SubServices subServices = super.loadById(subserviceId);
         subServices.setTechnicians(technicianList);
+        super.update(subServices);
         return convertEntityToOutputDto(subServices);
     }
 
