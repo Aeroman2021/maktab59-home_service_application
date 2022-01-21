@@ -9,14 +9,13 @@ import com.example.demo.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/orders/customers")
+@RequestMapping("/orders")
 public class OrderRestController {
 
     private  final OrderService orderService;
@@ -24,8 +23,8 @@ public class OrderRestController {
     @PostMapping("/submitOrder")
     public ResponseEntity<ResponseResult<OutputOrderInformationDto>> addOrderForCustomer
             (@RequestBody AddOrderForCustomerInputArgsDto orderForCustomerInputArgsDto) {
-        Order order = orderService.addOrderForCustomer(orderForCustomerInputArgsDto);
-        OutputOrderInformationDto outputOrderInformationDto = orderService.convertEntityToOutputDto(order);
+        OutputOrderInformationDto outputOrderInformationDto =
+                orderService.addOrderForCustomer(orderForCustomerInputArgsDto);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ResponseResult.<OutputOrderInformationDto>builder()
                         .code(0)
@@ -54,6 +53,32 @@ public class OrderRestController {
                         .data(outputOrderInformationDto)
                         .message("order status updated successfully.")
                         .build());
+    }
+
+    @GetMapping("/loadlist/relatedorders/{technicianId}")
+    public ResponseEntity<ResponseResult<OutputOrderInformationDto>>
+    listOrdersOfTheCustomer(@ PathVariable Integer technicianId){
+        List<OutputOrderInformationDto> orderInformationDtos =
+                orderService.listRelatedOrdersForTechnicians(technicianId);
+
+        return ResponseEntity.ok(ResponseResult.<OutputOrderInformationDto>builder()
+                .code(0)
+                .dataList(orderInformationDtos)
+                .message("The orderlist list loaded successfully")
+                .build());
+    }
+
+
+    @GetMapping("/loadlist/submittedorders/{customerId}")
+    public ResponseEntity<ResponseResult<OutputOrderInformationDto>> loadOrderByCustomerId(@PathVariable Integer customerId){
+        List<OutputOrderInformationDto> orderInformationDtos =
+                orderService.loadOrdersByCustomerId(customerId);
+
+        return ResponseEntity.ok(ResponseResult.<OutputOrderInformationDto>builder()
+                .code(0)
+                .dataList(orderInformationDtos)
+                .message("The orderlist list loaded successfully")
+                .build());
     }
 
 
