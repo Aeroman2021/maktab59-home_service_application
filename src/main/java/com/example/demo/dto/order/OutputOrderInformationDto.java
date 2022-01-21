@@ -16,7 +16,6 @@ public class OutputOrderInformationDto {
     private Integer orderId;
     private Integer customerId;
     private Integer serviceId;
-    private OrderStatus orderStatus = OrderStatus.PENDING_FOR_TECHNICIAN_SUGGESTION;
-
+    private OrderStatus orderStatus;
 
 }
