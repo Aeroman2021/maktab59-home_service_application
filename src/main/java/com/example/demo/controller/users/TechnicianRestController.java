@@ -30,6 +30,63 @@ public class TechnicianRestController {
     private final OrderService orderService;
     private final SuggestionService suggestionService;
 
+    @GetMapping("/technicians/firstname/{firstName}")
+    public ResponseEntity<ResponseResult<UserOutputDto>> filterTechsByFirstName(@PathVariable String firstName) {
+        List<UserOutputDto> techs = technicianService.loadTechsByFirstName(firstName);
+        return ResponseEntity.ok(ResponseResult.<UserOutputDto>builder()
+                .code(0)
+                .dataList(techs)
+                .message("The technician list loaded successfully...")
+                .build()
+        );
+    }
+
+    @GetMapping("/technicians/lastname/{lastName}")
+    public ResponseEntity<ResponseResult<UserOutputDto>> filterTechsByLastName(@PathVariable String lastName) {
+        List<UserOutputDto> techs = technicianService.loadTechsByByLastname(lastName);
+        return ResponseEntity.ok(ResponseResult.<UserOutputDto>builder()
+                .code(0)
+                .dataList(techs)
+                .message("The technician list loaded successfully...")
+                .build()
+        );
+    }
+
+    @GetMapping("/technicians/email/{email}")
+    public ResponseEntity<ResponseResult<UserOutputDto>> filterTechsByEmail(@PathVariable String email) {
+        UserOutputDto technician = technicianService.filterTechsByEmail(email);
+        return ResponseEntity.ok(ResponseResult.<UserOutputDto>builder()
+                .code(0)
+                .data(technician)
+                .message("The technician loaded successfully...")
+                .build()
+        );
+    }
+
+    @GetMapping("/technicians/point/{point}")
+    public ResponseEntity<ResponseResult<UserOutputDto>> filterTechsByPoint(@PathVariable Double point) {
+        List<UserOutputDto> techs = technicianService.loadTechsWithPointsGreaterThanLimit(point);
+        return ResponseEntity.ok(ResponseResult.<UserOutputDto>builder()
+                .code(0)
+                .dataList(techs)
+                .message("The technician list loaded successfully...")
+                .build()
+        );
+    }
+
+    @PutMapping ("/submit/technicians/{technicianId}/subservices/{subserviceId}")
+    public ResponseEntity<ResponseResult<SubServiceOutputDto>>
+    submitTechToSubService( @PathVariable Integer subserviceId,@PathVariable Integer technicianId ){
+        SubServiceOutputDto subServiceOutputDto =
+                subServicesService.submitTechnicianToSubService(subserviceId,technicianId);
+        return ResponseEntity.ok(ResponseResult.<SubServiceOutputDto>builder()
+                .code(0)
+                .data(subServiceOutputDto)
+                .message("The technician submitted to the subservice successfully.")
+                .build());
+    }
+
+
     @PostMapping
     public ResponseEntity<ResponseResult<UserOutputDto>> saveTechnician
             (@RequestBody RegisterTechnicianInputDto technicianInputDto) {
@@ -55,7 +112,6 @@ public class TechnicianRestController {
     }
 
 
-
     @GetMapping("/List/subservices")
     public ResponseEntity<ResponseResult<SubServiceOutputDto>> saveMainService() {
         List<SubServiceOutputDto> subServiceOutputDtos = subServicesService.loadAllSubServices();
@@ -70,7 +126,7 @@ public class TechnicianRestController {
     public ResponseEntity<ResponseResult<OutputOrderInformationDto>>
     printRelatedOrderList(@PathVariable Integer technicianId) {
         List<OutputOrderInformationDto> orderInformationDtos =
-                orderService.printRelatedOrdersForTechnicians(technicianId);
+                orderService.listRelatedOrdersForTechnicians(technicianId);
         return ResponseEntity.ok(ResponseResult.<OutputOrderInformationDto>builder()
                 .code(0)
                 .dataList(orderInformationDtos)
