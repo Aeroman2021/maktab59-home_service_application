@@ -16,8 +16,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.PostConstruct;
-import java.io.DataOutput;
 import java.sql.Date;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +29,7 @@ public class BalanceService extends AbstractCRUD<Balance, Integer> implements
     private final TechnicianService technicianService;
     private final SuggestionService suggestionService;
     private final CreditCardService cardService;
+    private final OrderService orderService;
 
 
     @PostConstruct
@@ -38,7 +39,7 @@ public class BalanceService extends AbstractCRUD<Balance, Integer> implements
 
 
     @Transactional
-    public void saveOrUpdate(Balance balance, Integer custID, Integer techID) {
+    public void intitialBalanceSave(Balance balance, Integer custID, Integer techID) {
         Customer customer = customerService.loadById(custID);
         Technician technician = technicianService.loadById(techID);
 
@@ -49,38 +50,47 @@ public class BalanceService extends AbstractCRUD<Balance, Integer> implements
     }
 
     @Transactional
-    public void saveATransaction(InputBalanceDto inputBalanceDto) {
+    public OutputBalanceDto finalaizingAndCheckout(InputBalanceDto inputBalanceDto) {
+
         Balance balance = convertInputToEntity(inputBalanceDto);
         Customer customer = balance.getCustomer();
+        System.out.println(customer.getFirstName());
         Technician technician = balance.getTechnician();
+        System.out.println(technician.getFirstName());
         Double cost = balance.getSuggestion().getSuggestedPrice();
+        System.out.println(cost);
         Integer suggestionId = balance.getSuggestion().getId();
+        System.out.println(suggestionId);
         CreditCardInputDto creditCardInputDto = inputBalanceDto.getCreditCardInputDto();
 
-        if(customerIsAbleToAffordTheSuggestion(creditCardInputDto,suggestionId,customer.getId())){
+        if (orderService.jobIsDone(inputBalanceDto.getOrderId()) &&
+                customerIsAbleToAffordTheSuggestion(creditCardInputDto, suggestionId, customer.getId())) {
             Double custUpdatedCredit = customer.getCredit() - cost;
             customer.setCredit(custUpdatedCredit);
             customerService.update(customer);
             balance.setCustomerBalance(custUpdatedCredit);
-            Double techUpdatedCredit = technician.getCredit() + cost;
+            Double techUpdatedCredit = technician.getCredit() + (0.7 * cost);
             technician.setCredit(techUpdatedCredit);
             technicianService.update(technician);
             balance.setTechnicianBalance(techUpdatedCredit);
-            super.update(balance);
-        }else
+            super.save(balance);
+            return convertEntityToOutputDto(balance);
+        } else
             throw new BalanceException("Unsuccessfully Transaction");
-
     }
 
 
     public boolean customerIsAbleToAffordTheSuggestion(CreditCardInputDto creditCardInputDto,
                                                        Integer suggestionId, Integer customerId) {
+
+        System.out.println("customerIsAbleToAffordTheSuggestion");
         return (CreditIsSufficient(suggestionId, customerId) && CreditCardIsValid(creditCardInputDto));
 
     }
 
 
     public boolean CreditIsSufficient(Integer suggestionId, Integer customerId) {
+        System.out.println("CreditIsSufficient");
         if (customerService.loadById(customerId).getCredit() >
                 suggestionService.loadById(suggestionId).getSuggestedPrice()) {
             return true;
@@ -90,13 +100,14 @@ public class BalanceService extends AbstractCRUD<Balance, Integer> implements
     }
 
     public Boolean CreditCardIsValid(CreditCardInputDto creditCardInputDto) {
+        System.out.println("CreditCardIsValid");
         CreditCard creditCard = cardService.loadCreditCardByCustomerId(creditCardInputDto.getCustomerId());
-        if (creditCard.getCardNumber().equals(creditCardInputDto.getCardNumber()) &&
-                creditCard.getCVV2().equals(creditCardInputDto.getCVV2()) &&
-                creditCard.getPassword().equals(creditCardInputDto.getPassword()) &&
-                creditCard.getExpDate().equals(creditCardInputDto.getExpDate())) {
-            return true;
-        } else
+       if( (Objects.equals(creditCard.getCardNumber(), creditCardInputDto.getCardNumber()) &&
+                Objects.equals(creditCard.getCVV2(), creditCardInputDto.getCvv2()) &&
+                Objects.equals(creditCard.getPassword(), creditCardInputDto.getPassword()) &&
+                creditCard.getExpDate() ==(creditCardInputDto.getExpDate())))
+           return true;
+       else
             throw new CreditCardException("Mismatch creditcard");
     }
 
@@ -107,10 +118,9 @@ public class BalanceService extends AbstractCRUD<Balance, Integer> implements
                 .suggestion(suggestionService.loadById(inputBalanceDto.getSuggestionId()))
                 .customerBalance(customerService.loadById(inputBalanceDto.getCustomerId()).getCredit())
                 .customer(customerService.loadById(inputBalanceDto.getCustomerId()))
-                .TechnicianBalance(technicianService.loadById(inputBalanceDto.getCustomerId()).getCredit())
-                .technician(technicianService.loadById(inputBalanceDto.getCustomerId()))
+                .TechnicianBalance(technicianService.loadById(inputBalanceDto.getTechnicianId()).getCredit())
+                .technician(technicianService.loadById(inputBalanceDto.getTechnicianId()))
                 .transactionDate(new Date(System.currentTimeMillis()))
-                .suggestion(suggestionService.loadById(inputBalanceDto.getSuggestionId()))
                 .build();
     }
 
