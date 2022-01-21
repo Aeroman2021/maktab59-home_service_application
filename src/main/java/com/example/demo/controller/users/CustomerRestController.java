@@ -43,6 +43,41 @@ public class CustomerRestController {
                         .build());
     }
 
+    // http://localhost:8080/Customer/firstname?firstName=Ali
+    @GetMapping("/customers/firstname/{firstName}")
+    public ResponseEntity<ResponseResult<UserOutputDto>> filterCustsByFirstName(@PathVariable String firstName) {
+        List<UserOutputDto> customers = customerService.loadCustomerByFirstName(firstName);
+        return ResponseEntity.ok(ResponseResult.<UserOutputDto>builder()
+                .code(0)
+                .dataList(customers)
+                .message("The customer list loaded successfully...")
+                .build()
+        );
+    }
+
+    // http://localhost:8080/Customer/Alavi
+    @GetMapping("/customers/lastname/{lastName}")
+    public ResponseEntity<ResponseResult<UserOutputDto>> filterCustsByLastName(@PathVariable String lastName) {
+        List<UserOutputDto> customers = customerService.loadCustomerByLastname(lastName);
+        return ResponseEntity.ok(ResponseResult.<UserOutputDto>builder()
+                .code(0)
+                .dataList(customers)
+                .message("The customer list loaded successfully...")
+                .build()
+        );
+    }
+
+    @GetMapping("/customers/email/{email}")
+    public ResponseEntity<ResponseResult<UserOutputDto>> filterCustsByEmail(@PathVariable String email) {
+        UserOutputDto customer = customerService.filterCustomerByEmail(email);
+        return ResponseEntity.ok(ResponseResult.<UserOutputDto>builder()
+                .code(0)
+                .data(customer)
+                .message("The customer loaded successfully")
+                .build()
+        );
+    }
+
     @PostMapping("/comments")
     public ResponseEntity<ResponseResult<OutputCommentDto>> addComment(@RequestBody InputCommentDto inputCommentDto) {
         OutputCommentDto outputCommentDto = commentService.addCommentForOrder(inputCommentDto);
