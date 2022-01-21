@@ -13,7 +13,7 @@ import java.util.List;
 @Repository
 public interface TechnicianRepository extends JpaRepository<Technician, Integer> {
 
-    List<Technician> findTechniciansByRegisterDate(Date registerDate);
+    List<Technician> findTechniciansByRegisterDateAfter(Date registerDate);
 
     List<Technician> findTechniciansByStatus(RegisterStatus status);
 
@@ -25,7 +25,7 @@ public interface TechnicianRepository extends JpaRepository<Technician, Integer>
 
     Technician findTechnicianByUsernameAndPassword(String username,String password);
 
-    List<Technician> findTechnicianByAveragePointGreaterThan(Integer point);
+    List<Technician> findTechnicianByAveragePointGreaterThan(Double point);
 
 
     @Query(value = "select t.full_name," +
