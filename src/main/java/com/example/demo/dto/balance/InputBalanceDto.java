@@ -12,9 +12,9 @@ import lombok.NoArgsConstructor;
 @Builder
 public class InputBalanceDto {
     private CreditCardInputDto creditCardInputDto;
+    private Integer orderId;
     private Integer customerId;
     private Integer technicianId;
-    private Integer balanceId;
     private Integer suggestionId;
 
 }
