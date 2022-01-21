@@ -18,6 +18,10 @@ import java.sql.Date;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+
+import static com.example.demo.model.enums.OrderStatus.*;
 
 @Service
 @RequiredArgsConstructor
@@ -26,8 +30,7 @@ public class OrderService extends AbstractCRUD<Order, Integer> {
     private final OrderRepository orderRepository;
     private final CustomerService customerService;
     private final SubServicesService subServicesService;
-    private final SuggestionService suggestionService;
-    private final OrderService orderService;
+    private final TechnicianService technicianService;
 
     @PostConstruct
     public void init() {
@@ -50,16 +53,59 @@ public class OrderService extends AbstractCRUD<Order, Integer> {
         return orderRepository.findOrderBySubServicesId(subServiceId);
     }
 
-    public List<Order> listRelatedOrdersForTechnicians(Integer technicianId) {
-        return orderRepository.listRelatedOrderForTechnicians(technicianId);
+    public List<Order> listOrdersBasedOnMainService(Integer mainServiceId) {
+        Predicate<Order> ordersWithSpecifiedMainService = order ->
+                order.getSubServices().getMainServices().getId().equals(mainServiceId);
+        return super.loadAll().stream().filter(ordersWithSpecifiedMainService).collect(Collectors.toList());
+
     }
 
-    public List<Technician> filterTechniciansBasedOnTheSubServiceId(Integer subServiceId){
+
+//    public List<Order> listRelatedOrdersForTechnicians(Integer technicianId) {
+//        return orderRepository.listRelatedOrderForTechnicians(technicianId);
+//    }
+
+    public List<Technician> filterTechniciansBasedOnTheSubServiceId(Integer subServiceId) {
         return orderRepository.listTechniciansBasedOnTheSubServiceId(subServiceId);
     }
 
+    public List<Order> findOrderByStatusIsPENDING_FOR_TECHNICIAN_SUGGESTION() {
+        Predicate<Order> orderStatusIsPENDING_FOR_TECHNICIAN_SUGGESTION =
+                order -> order.getStatus().equals(PENDING_FOR_TECHNICIAN_SUGGESTION);
+
+        return super.loadAll()
+                .stream()
+                .filter(orderStatusIsPENDING_FOR_TECHNICIAN_SUGGESTION)
+                .collect(Collectors.toList());
+    }
+
+    public List<Order> filterOrdersBaseOnRegisterDate(Date registerDate) {
+        return orderRepository.findOrderByRegisterDate(registerDate);
+    }
+
+    public List<Order> findOrderByStatusIsPENDING_FOR_SELECTING_TECHNICIAN() {
+        Predicate<Order> orderStatusIsPENDING_FOR_SELECTING_TECHNICIAN =
+                order -> order.getStatus().equals(PENDING_FOR_SELECTING_TECHNICIAN);
+
+        return super.loadAll()
+                .stream()
+                .filter(orderStatusIsPENDING_FOR_SELECTING_TECHNICIAN)
+                .collect(Collectors.toList());
+    }
+
+    public List<Order> findOrderByStatusIsFINISHED_THE_PROCESS() {
+        Predicate<Order> orderStatusIsFINISHED_THE_PROCESS =
+                order -> order.getStatus().equals(FINISHED_THE_PROCESS);
+
+        return super.loadAll()
+                .stream()
+                .filter(orderStatusIsFINISHED_THE_PROCESS)
+                .collect(Collectors.toList());
+    }
+
+
     public Boolean technicianIsQualifyForTheOrder(Integer technicianId, Integer orderId) {
-        Integer subServiceId = orderService.loadById(orderId).getSubServices().getId();
+        Integer subServiceId = super.loadById(orderId).getSubServices().getId();
         for (Technician technician : filterTechniciansBasedOnTheSubServiceId(subServiceId)) {
             if (Objects.equals(technician.getId(), technicianId))
                 return true;
@@ -71,19 +117,27 @@ public class OrderService extends AbstractCRUD<Order, Integer> {
     public List<OutputOrderInformationDto> loadOrdersByCustomerId(Integer customerId) {
         List<Order> ordersList = orderRepository.findOrderByCustomerId(customerId);
         List<OutputOrderInformationDto> orderInformationDtos = new ArrayList<>();
-        if (ordersList.size() != 0) {
-            {
-                for (Order order : ordersList) {
-                    orderInformationDtos.add(convertEntityToOutputDto(order));
-                }
+        if (!orderListIsEmpty(customerId)) {
+            for (Order order : ordersList) {
+                orderInformationDtos.add(convertEntityToOutputDto(order));
             }
             return orderInformationDtos;
         } else
             throw new OrderException("Empty order List.");
     }
 
+
+    public boolean orderListIsEmpty(Integer cusromerId) {
+        return orderRepository.findOrderByCustomerId(cusromerId).isEmpty();
+    }
+
+
+    public Integer numberOfSubmittedOrders(Integer customerId) {
+        return orderRepository.findOrderByCustomerId(customerId).size();
+    }
+
     @Transactional
-    public Order addOrderForCustomer(AddOrderForCustomerInputArgsDto inputArgsDto) {
+    public OutputOrderInformationDto addOrderForCustomer(AddOrderForCustomerInputArgsDto inputArgsDto) {
         Integer subServiceId = inputArgsDto.getSubServiceId();
         Integer customerId = inputArgsDto.getCustomerId();
         InputOrderInformationDto submittedOrderDto = inputArgsDto.getSubmittedOrderDto();
@@ -95,8 +149,9 @@ public class OrderService extends AbstractCRUD<Order, Integer> {
         if (!orderIsDuplicate(subServiceId, customerId)) {
             order.setCustomer(customer);
             order.setSubServices(subServices);
-            order.setStatus(OrderStatus.PENDING_FOR_TECHNICIAN_SUGGESTION);
-            return super.save(order);
+            order.setStatus(PENDING_FOR_TECHNICIAN_SUGGESTION);
+            super.save(order);
+            return convertEntityToOutputDto(order);
         } else {
             throw new OrderException("Unable to submit Order!");
         }
@@ -124,13 +179,12 @@ public class OrderService extends AbstractCRUD<Order, Integer> {
                 .build();
     }
 
-
     public OutputOrderInformationDto convertEntityToOutputDto(Order order) {
         return OutputOrderInformationDto.builder()
                 .orderId(order.getId())
                 .customerId(order.getCustomer().getId())
                 .serviceId(order.getSubServices().getId())
-                .orderStatus(OrderStatus.PENDING_FOR_TECHNICIAN_SUGGESTION)
+                .orderStatus(order.getStatus())
                 .build();
     }
 
@@ -144,24 +198,21 @@ public class OrderService extends AbstractCRUD<Order, Integer> {
     }
 
     public boolean OrderHasSuggestions(Integer orderId) {
-        return suggestionService.findSuggestionsByOrderId(orderId) != null;
-        // orderservice
+        return super.loadById(orderId).getSuggestions() != null;
     }
 
     public boolean SuggestionIsAcceptedByCustomer(Integer orderId) {
-        for (Suggestion suggestion : suggestionService.findSuggestionsByOrderId(orderId)) {
+        for (Suggestion suggestion : super.loadById(orderId).getSuggestions()) {
             if (suggestion.getStatus().equals(SuggestionStatus.Accepted))
                 return true;
         }
         return false;
-
-        //orderservice
     }
 
     public Boolean updateOrderStatus_TO_PENDING_FOR_SELECTING_TECHNICIAN(Integer orderId) {
         if (OrderHasSuggestions(orderId)) {
             Order order = super.loadById(orderId);
-            order.setStatus(OrderStatus.PENDING_FOR_SELECTING_TECHNICIAN);
+            order.setStatus(PENDING_FOR_SELECTING_TECHNICIAN);
             super.update(order);
             return true;
         }
@@ -186,7 +237,7 @@ public class OrderService extends AbstractCRUD<Order, Integer> {
                     .orderId(orderId)
                     .customerId(order.getCustomer().getId())
                     .serviceId(order.getSubServices().getId())
-                    .orderStatus(OrderStatus.PENDING_FOR_SELECTING_TECHNICIAN)
+                    .orderStatus(PENDING_FOR_SELECTING_TECHNICIAN)
                     .build();
         } else
             return null;
@@ -205,11 +256,19 @@ public class OrderService extends AbstractCRUD<Order, Integer> {
             return null;
     }
 
-    public List<OutputOrderInformationDto> printRelatedOrdersForTechnicians(Integer technicianId){
+    public boolean jobIsDone(Integer orderId) {
+        return super.loadById(orderId).getStatus().equals(FINISHED_THE_PROCESS);
+    }
+
+    public List<OutputOrderInformationDto> listRelatedOrdersForTechnicians(Integer technicianId) {
         List<OutputOrderInformationDto> orderInformationDtos = new ArrayList<>();
-        for (Order order : listRelatedOrdersForTechnicians(technicianId)) {
-            OutputOrderInformationDto outputOrderInformationDto = convertEntityToOutputDto(order);
-            orderInformationDtos.add(outputOrderInformationDto);
+        Predicate<Order> selectedOrderForTechnicians = order ->
+                order.getSubServices()
+                        .getTechnicians()
+                        .contains(technicianService.loadById(technicianId));
+        List<Order> orders = super.loadAll().stream().filter(selectedOrderForTechnicians).toList();
+        for (Order order : orders) {
+            orderInformationDtos.add(convertEntityToOutputDto(order));
         }
         return orderInformationDtos;
     }
