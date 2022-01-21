@@ -19,8 +19,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.PostConstruct;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 @Service
@@ -113,6 +116,23 @@ public class SuggestionService extends AbstractCRUD<Suggestion, Integer> impleme
                 .technicianId(suggestion.getTechnician().getId())
                 .build();
     }
+
+    public List<SuggestionOutputDto> listCompletedOrdersByTechnicians(Integer technicianId) {
+        List<Suggestion> suggestions = suggestionRepository.findSuggestionsByTechnicianId(technicianId);
+        List<SuggestionOutputDto> suggestionOutputDtos = new ArrayList<>();
+        Predicate<Suggestion> finishedJobPredicate =
+                suggestion -> suggestion.getOrder().getStatus().equals(OrderStatus.FINISHED_THE_PROCESS);
+
+        for (Suggestion suggestion : suggestions.stream().filter(finishedJobPredicate).toList()) {
+            suggestionOutputDtos.add(convertEntityToOutputDto(suggestion));
+        }
+        return suggestionOutputDtos;
+    }
+
+    public Integer numberOfSuggestions(Integer technicianId){
+        return suggestionRepository.findSuggestionsByTechnicianId(technicianId).size();
+    }
+
 
 
 }
