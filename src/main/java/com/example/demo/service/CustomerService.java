@@ -96,6 +96,10 @@ public class CustomerService extends AbstractCRUD<Customer, Integer> implements 
         return customerRepository.findCustomerByEmail(email);
     }
 
+    public List<Customer> filterCustomersByRegisterDate(Date date){
+        return customerRepository.findCustomersByRegisterDateAfter(date);
+    }
+
     public UserOutputDto filterCustomerByEmail(String email) {
         return convertEntityToOutputDto(customerRepository.findCustomerByEmail(email));
     }
