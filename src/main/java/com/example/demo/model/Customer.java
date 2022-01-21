@@ -28,7 +28,7 @@ public class Customer extends User {
     @OneToMany(mappedBy = "customer",cascade = {CascadeType.MERGE,CascadeType.PERSIST})
     private List<Balance> transactions;
 
-    @OneToOne
+    @OneToOne(mappedBy = "customer")
     private CreditCard creditCard;
 
     @Override
