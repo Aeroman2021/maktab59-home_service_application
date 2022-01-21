@@ -70,7 +70,7 @@ public class TechnicianService extends AbstractCRUD<Technician,Integer> implemen
     }
 
     public List<Technician> filterTechniciansByRegisterDate(Date date){
-        return technicianRepository.findTechniciansByRegisterDate(date);
+        return technicianRepository.findTechniciansByRegisterDateAfter(date);
     }
 
     public List<Technician> filterTechniciansByRegStatus(RegisterStatus status){
@@ -108,7 +108,7 @@ public class TechnicianService extends AbstractCRUD<Technician,Integer> implemen
     }
 
 
-    public List<UserOutputDto> loadTechsWithPointsGreaterThanLimit(Integer point){
+    public List<UserOutputDto> loadTechsWithPointsGreaterThanLimit(Double point){
         List<UserOutputDto> submittedTechsList = new ArrayList<>();
         for (Technician technician : technicianRepository.findTechnicianByAveragePointGreaterThan(point)) {
             UserOutputDto userOutputDto = convertEntityToOutputDto(technician);
