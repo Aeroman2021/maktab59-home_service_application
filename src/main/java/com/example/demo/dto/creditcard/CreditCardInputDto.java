@@ -12,8 +12,8 @@ import java.sql.Date;
 @AllArgsConstructor
 @Builder
 public class CreditCardInputDto {
-    private Long CardNumber;
-    private Integer CVV2;
+    private Long cardNumber;
+    private Integer cvv2;
     private Date expDate;
     private String password;
     private Integer customerId;
