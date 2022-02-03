@@ -1,6 +1,7 @@
 package com.example.demo.service.core;
 
 import com.example.demo.Exceptions.EntityNotFoundException;
+import com.example.demo.Exceptions.NotFoundException;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,7 +28,7 @@ public class AbstractCRUD <T,ID> {
 
     public T loadById(ID id){
         return  jpaRepository.findById(id).orElseThrow(
-                ()-> new EntityNotFoundException("Entity with id " + id + " not existed!")
+                ()-> new NotFoundException("Entity with id " + id + " not existed!")
         );
     }
 
