@@ -1,6 +1,7 @@
 package com.example.demo.service;
 
 
+import com.example.demo.Exceptions.OrderException;
 import com.example.demo.Exceptions.SuggestionException;
 import com.example.demo.dto.suggestion.SuggestionInputDto;
 import com.example.demo.dto.suggestion.SuggestionOutputDto;
@@ -14,6 +15,7 @@ import com.example.demo.repository.SuggestionRepository;
 import com.example.demo.service.core.AbstractCRUD;
 import com.example.demo.service.core.EntityConvertor;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,9 +25,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SuggestionService extends AbstractCRUD<Suggestion, Integer> implements
@@ -62,9 +63,11 @@ public class SuggestionService extends AbstractCRUD<Suggestion, Integer> impleme
             suggestion.setOrder(order);
             order.setStatus(OrderStatus.PENDING_FOR_SELECTING_TECHNICIAN);
             return convertEntityToOutputDto(super.save(suggestion));
-        } else
+        } else{
+            log.error("the technician with thw id {} is not qualify for the order with id {} "
+                    ,technician.getId(),order.getId() );
             throw new SuggestionException("unqualify technician for the order");
-
+        }
     }
 
 
@@ -76,22 +79,33 @@ public class SuggestionService extends AbstractCRUD<Suggestion, Integer> impleme
     }
 
     public List<SuggestionOutputDto> sortSuggestionsBasedOnTechnicianPointDESC(Integer orderId, Pageable pageable) {
+        if(!orderIsExist(orderId))
+            throw new OrderException("Order not exist");
+
         return suggestionRepository.findAll((r, q, cb) -> {
-            q.orderBy(cb.desc(r.get("technician").get("point")));
+            q.orderBy(cb.desc(r.get("technician").get("averagePoint")));
             return cb.equal(r.get("order").get("id"), orderId);
         }, pageable).stream().map(this::convertEntityToOutputDto).collect(Collectors.toList());
 
     }
 
     public List<SuggestionOutputDto> sortSuggestionsBasedOnSuggestedPriceASC(Integer orderId, Pageable pageable) {
+
+        if(!orderIsExist(orderId))
+            throw new OrderException("Order not exist");
+
         return suggestionRepository.findAll((r, q, cb) -> {
-            q.orderBy(cb.asc(r.get("suggestion").get("suggestedPrice")));
+            q.orderBy(cb.asc(r.get("suggestedPrice")));
             return cb.equal(r.get("order").get("id"), orderId);
         }, pageable).stream().map(this::convertEntityToOutputDto).collect(Collectors.toList());
     }
 
     public List<Suggestion> findSuggestionsByOrderId(Integer orderId) {
         return suggestionRepository.findSuggestionByOrderId(orderId);
+    }
+
+    public boolean orderIsExist(Integer orderId){
+        return orderService.loadById(orderId) != null;
     }
 
 
@@ -119,14 +133,20 @@ public class SuggestionService extends AbstractCRUD<Suggestion, Integer> impleme
 
     public List<SuggestionOutputDto> listCompletedOrdersByTechnicians(Integer technicianId) {
         List<Suggestion> suggestions = suggestionRepository.findSuggestionsByTechnicianId(technicianId);
-        List<SuggestionOutputDto> suggestionOutputDtos = new ArrayList<>();
+        List<SuggestionOutputDto> result = new ArrayList<>();
         Predicate<Suggestion> finishedJobPredicate =
                 suggestion -> suggestion.getOrder().getStatus().equals(OrderStatus.FINISHED_THE_PROCESS);
 
         for (Suggestion suggestion : suggestions.stream().filter(finishedJobPredicate).toList()) {
-            suggestionOutputDtos.add(convertEntityToOutputDto(suggestion));
+            result.add(convertEntityToOutputDto(suggestion));
         }
-        return suggestionOutputDtos;
+
+        if(result.isEmpty()){
+            log.error("No completed order found for the the technician with id {} ", technicianId);
+            throw new OrderException("No completed order found for the the technician");
+        }
+
+        return result;
     }
 
     public Integer numberOfSuggestions(Integer technicianId){
